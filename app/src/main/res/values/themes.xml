@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Tema base solo para la ventana; todo lo visual lo pinta Compose con MaterialExpressiveTheme -->
+    <style name="Theme.App" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/splash_background</item>
+    </style>
+    <color name="splash_background">#141319</color>
+    <color name="ic_launcher_background">#5B4FC4</color>
+</resources>
