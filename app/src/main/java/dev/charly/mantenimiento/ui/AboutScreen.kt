@@ -123,6 +123,60 @@ fun AboutScreen(vm: AppViewModel, onBack: () -> Unit) {
                 }
             }
 
+            // ---------- Actualizaciones ----------
+            item { SectionHeader("Actualizaciones", Modifier.staggeredEnter(1)) }
+            item {
+                val up = vm.updateUi
+                val haptics = LocalHaptics.current
+                Surface(
+                    shape = RoundedCornerShape(28.dp),
+                    color = colors.surfaceContainer,
+                    modifier = Modifier.fillMaxWidth().staggeredEnter(1),
+                ) {
+                    Column(Modifier.padding(20.dp)) {
+                        Text(
+                            "Versión instalada: ${vm.updates.currentVersion}",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        Text(
+                            when {
+                                up.checking -> "Buscando…"
+                                up.info != null -> "Versión ${up.info.version} disponible"
+                                up.error -> "No se pudo buscar o descargar la actualización. Revisa tu conexión."
+                                up.upToDate -> "Tienes la versión más reciente"
+                                else -> ""
+                            },
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = if (up.error) colors.error else colors.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 4.dp),
+                        )
+                        Spacer(Modifier.height(14.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            if (up.info != null) {
+                                Button(onClick = { haptics.rise(); vm.downloadAndInstall() }) {
+                                    Text(
+                                        when {
+                                            up.progress != null -> if (up.progress < 0) "Descargando…" else "Descargando… ${(up.progress * 100).toInt()}%"
+                                            up.file != null -> "Instalar"
+                                            else -> "Actualizar"
+                                        }
+                                    )
+                                }
+                            } else {
+                                FilledTonalButton(
+                                    onClick = {
+                                        haptics.click()
+                                        vm.checkForUpdates()
+                                    },
+                                    enabled = !up.checking,
+                                ) { Text(if (up.checking) "Buscando…" else "Buscar actualizaciones") }
+                            }
+                        }
+                    }
+                }
+            }
+
             // ---------- Créditos ----------
             item { SectionHeader("Créditos", Modifier.staggeredEnter(1)) }
             item {

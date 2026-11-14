@@ -5,6 +5,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import dev.charly.mantenimiento.data.UpdateInfo
+import dev.charly.mantenimiento.data.UpdateRepository
+import kotlinx.coroutines.launch
+import java.io.File
 import dev.charly.mantenimiento.data.AppSettings
 import dev.charly.mantenimiento.data.FuelEntry
 import dev.charly.mantenimiento.data.MaintenanceEntry
@@ -14,6 +19,18 @@ import dev.charly.mantenimiento.data.Store
 import dev.charly.mantenimiento.data.Vehicle
 import dev.charly.mantenimiento.notify.Notifier
 import dev.charly.mantenimiento.notify.Reminders
+
+data class UpdateUi(
+    val info: UpdateInfo? = null,
+    val checking: Boolean = false,
+    /** null = sin descarga, 0..1 progreso, -1 tamaño desconocido */
+    val progress: Float? = null,
+    val file: File? = null,
+    val error: Boolean = false,
+    val upToDate: Boolean = false,
+    val dismissed: Boolean = false,
+    val needsPermission: Boolean = false,
+)
 
 /** Lo que pidió abrir una notificación (se consume una vez). */
 data class PendingOpen(val what: String, val vehicleId: Long, val scheduledId: Long?)
@@ -33,9 +50,62 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     val activeVehicle: Vehicle?
         get() = data.vehicles.firstOrNull { it.id == settings.activeVehicle } ?: data.vehicles.firstOrNull()
 
+    val updates = UpdateRepository(ctx)
+
+    var updateUi by mutableStateOf(UpdateUi())
+        private set
+
     init {
         Notifier.createChannels(ctx)
         Reminders.schedule(ctx)
+        // Busca actualizaciones solo si pasaron más de 6 horas desde la última vez
+        if (System.currentTimeMillis() - updates.lastCheckMillis() > 6 * 60 * 60 * 1000L) checkForUpdates()
+    }
+
+    // ---------------- Actualizaciones ----------------
+
+    fun checkForUpdates() {
+        if (updateUi.checking) return
+        updateUi = updateUi.copy(checking = true, error = false, upToDate = false)
+        viewModelScope.launch {
+            updateUi = try {
+                val info = updates.check()
+                updateUi.copy(info = info, checking = false, upToDate = info == null, dismissed = false)
+            } catch (e: Exception) {
+                updateUi.copy(checking = false, error = true)
+            }
+        }
+    }
+
+    fun dismissUpdate() {
+        updateUi = updateUi.copy(dismissed = true)
+    }
+
+    /** Descarga el APK y al terminar abre el instalador. */
+    fun downloadAndInstall() {
+        val info = updateUi.info ?: return
+        updateUi.file?.let { if (it.exists()) { install(it); return } }
+        if (updateUi.progress != null) return
+        updateUi = updateUi.copy(progress = 0f, error = false)
+        viewModelScope.launch {
+            try {
+                val file = updates.download(info) { p -> updateUi = updateUi.copy(progress = p) }
+                updateUi = updateUi.copy(progress = null, file = file)
+                install(file)
+            } catch (e: Exception) {
+                updateUi = updateUi.copy(progress = null, error = true)
+            }
+        }
+    }
+
+    private fun install(file: File) {
+        if (!updates.canInstall()) {
+            updateUi = updateUi.copy(needsPermission = true)
+            updates.openInstallPermissionSettings()
+        } else {
+            updateUi = updateUi.copy(needsPermission = false)
+            updates.install(file)
+        }
     }
 
     private fun edit(change: (AppSettings) -> AppSettings) {

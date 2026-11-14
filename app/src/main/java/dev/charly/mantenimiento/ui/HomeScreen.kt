@@ -241,6 +241,21 @@ fun HomeScreen(vm: AppViewModel, onOpenSettings: () -> Unit, onOpenAbout: () -> 
                         bottom = pad.calculateBottomPadding() + 120.dp,
                     ),
                 ) {
+                    item(key = "update") {
+                        val up = vm.updateUi
+                        androidx.compose.animation.AnimatedVisibility(
+                            visible = up.info != null && !up.dismissed,
+                            enter = androidx.compose.animation.expandVertically(Motion.bouncy()) + fadeIn() + scaleIn(Motion.bouncy(), initialScale = 0.9f),
+                            exit = androidx.compose.animation.shrinkVertically() + fadeOut(),
+                        ) {
+                            UpdateBanner(
+                                update = up,
+                                onUpdate = vm::downloadAndInstall,
+                                onLater = vm::dismissUpdate,
+                                modifier = Modifier.padding(bottom = 12.dp),
+                            )
+                        }
+                    }
                     item(key = "cars") {
                         VehicleChips(
                             vehicles = data.vehicles.sortedBy { it.name.lowercase() },

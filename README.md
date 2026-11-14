@@ -21,6 +21,9 @@ App para Android que calcula el **rendimiento de combustible** de tus vehículos
 - Material You (colores del wallpaper) en Android 12+ y 8 paletas propias; el cambio de color se anima en toda la app
 - Animaciones con resortes: entrada escalonada, números que ruedan, transiciones entre pantallas y regreso predictivo (Android 14+)
 
+## Actualizaciones
+La app revisa los releases de este repo (cada 6 horas al abrirla, o a mano en *Acerca de → Actualizaciones*) y descarga e instala el APK nuevo. La versión debug busca el APK `-debug`.
+
 ## Ajustes
 - **Modo oscuro / claro** (toggle; la primera vez sigue al sistema)
 - **Color del tema**
