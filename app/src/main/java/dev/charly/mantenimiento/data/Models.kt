@@ -11,6 +11,10 @@ data class Vehicle(
     val plate: String = "",
     val initialKm: Double = 0.0,
     val colorIndex: Int = 0,
+    /** Archivo en filesDir/vehicle_images, o null para usar el color con el ícono. */
+    val image: String? = null,
+    /** true = la imagen completa dentro del círculo (logos); false = recortada para llenarlo (fotos). */
+    val imageFit: Boolean = true,
 )
 
 /** Una carga de combustible. [odometer] es lo que marca el tablero al cargar. */
@@ -83,6 +87,7 @@ fun AppData.toJson(): JSONObject = JSONObject().apply {
     put("vehicles", JSONArray(vehicles.map {
         JSONObject().put("id", it.id).put("name", it.name).put("model", it.model).put("year", it.year)
             .put("plate", it.plate).put("initialKm", it.initialKm).put("colorIndex", it.colorIndex)
+            .putOpt2("image", it.image).put("imageFit", it.imageFit)
     }))
     put("fuel", JSONArray(fuel.map {
         JSONObject().put("id", it.id).put("vehicleId", it.vehicleId).put("date", it.date)
@@ -108,6 +113,7 @@ fun appDataFromJson(o: JSONObject): AppData = AppData(
             id = it.getLong("id"), name = it.optString("name"), model = it.optString("model"),
             year = it.optString("year"), plate = it.optString("plate"),
             initialKm = it.optDouble("initialKm", 0.0), colorIndex = it.optInt("colorIndex", 0),
+            image = it.optString("image").takeIf { s -> s.isNotEmpty() }, imageFit = it.optBoolean("imageFit", true),
         )
     },
     fuel = o.optJSONArray("fuel").mapObjects {

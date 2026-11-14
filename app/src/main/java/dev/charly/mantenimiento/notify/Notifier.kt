@@ -18,6 +18,7 @@ import dev.charly.mantenimiento.data.Prefs
 import dev.charly.mantenimiento.data.ScheduledMaintenance
 import dev.charly.mantenimiento.data.Store
 import dev.charly.mantenimiento.data.Vehicle
+import dev.charly.mantenimiento.data.VehicleImages
 import dev.charly.mantenimiento.data.currentKm
 import dev.charly.mantenimiento.data.dueStatus
 import dev.charly.mantenimiento.data.startOfDay
@@ -109,6 +110,8 @@ object Notifier {
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .addAction(replyAction)
             .addAction(nothing)
+            // La imagen del vehículo como ícono grande, si tiene
+            .apply { v.image?.let { VehicleImages.load(c, it) }?.let { setLargeIcon(it) } }
             .build()
         runCatching { NotificationManagerCompat.from(c).notify(TAG_DAILY, id, n) }
     }
@@ -148,6 +151,7 @@ object Notifier {
             .setContentText(text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setContentIntent(openApp(c, OPEN_SCHEDULED, v.id, s.id))
+            .apply { v.image?.let { VehicleImages.load(c, it) }?.let { setLargeIcon(it) } }
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)

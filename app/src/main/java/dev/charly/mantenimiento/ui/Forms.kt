@@ -1,6 +1,16 @@
 package dev.charly.mantenimiento.ui
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.material3.ButtonGroupDefaults
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.LoadingIndicator
+import androidx.compose.material3.ToggleButton
+import dev.charly.mantenimiento.data.VehicleImages
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -626,9 +636,97 @@ fun VehicleSheet(
     var plate by rememberSaveable { mutableStateOf(editing?.plate ?: "") }
     var km by rememberSaveable { mutableStateOf(editing?.initialKm?.takeIf { it > 0 }?.let { formatPlain(it) } ?: "") }
     var color by rememberSaveable { mutableStateOf(editing?.colorIndex ?: 0) }
+    var image by rememberSaveable { mutableStateOf(editing?.image) }
+    var fit by rememberSaveable { mutableStateOf(editing?.imageFit ?: true) }
+    var importing by remember { mutableStateOf(false) }
+    var importError by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val scope = rememberCoroutineScope()
+    // Selector de fotos del sistema: no pide permisos de almacenamiento
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        importing = true
+        importError = false
+        scope.launch {
+            val name = withContext(Dispatchers.IO) { VehicleImages.import(context, uri) }
+            importing = false
+            if (name != null) {
+                // Si ya habías elegido otra en este formulario y no estaba guardada, se borra
+                if (image != null && image != editing?.image) VehicleImages.delete(context, image)
+                image = name
+                haptics.success()
+            } else {
+                importError = true
+                haptics.error()
+            }
+        }
+    }
 
     FormSheet(if (editing == null) "Nuevo vehículo" else "Editar vehículo", onDismiss) { close ->
+        // ---------- Imagen ----------
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            val spin by animateFloatAsState(if (image != null) 360f else 0f, Motion.bouncy(), label = "img")
+            Box(contentAlignment = Alignment.Center) {
+                VehicleAvatar(
+                    image = image,
+                    fit = fit,
+                    color = swatchColor(PALETTE_HUES[color], dark),
+                    size = 96.dp,
+                    shape = MaterialShapes.Cookie9Sided.toShape(),
+                    modifier = Modifier
+                        .graphicsLayer { rotationZ = spin }
+                        .clickable { haptics.click(); picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
+                    contentRotation = -spin,
+                )
+                if (importing) LoadingIndicator()
+            }
+            Spacer(Modifier.width(16.dp))
+            Column(Modifier.weight(1f)) {
+                Text("Imagen", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                Text(
+                    if (importError) "No se pudo abrir esa imagen, prueba con otra."
+                    else "El logo de la marca o una foto de tu vehículo",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (importError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilledTonalButton(
+                        onClick = { haptics.click(); picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
+                        enabled = !importing,
+                        shapes = ButtonDefaults.shapes(),
+                    ) { Text(if (image == null) "Elegir" else "Cambiar") }
+                    if (image != null) {
+                        TextButton(onClick = {
+                            haptics.fall()
+                            if (image != editing?.image) VehicleImages.delete(context, image)
+                            image = null
+                        }) { Text("Quitar") }
+                    }
+                }
+            }
+        }
+        AnimatedVisibility(image != null, enter = expandVertically(Motion.bouncy()) + fadeIn(), exit = shrinkVertically() + fadeOut()) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween),
+                modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+            ) {
+                ToggleButton(
+                    checked = fit,
+                    onCheckedChange = { haptics.select(); fit = true },
+                    shapes = ButtonGroupDefaults.connectedLeadingButtonShapes(),
+                    modifier = Modifier.weight(1f),
+                ) { Text("Completa (logo)") }
+                ToggleButton(
+                    checked = !fit,
+                    onCheckedChange = { haptics.select(); fit = false },
+                    shapes = ButtonGroupDefaults.connectedTrailingButtonShapes(),
+                    modifier = Modifier.weight(1f),
+                ) { Text("Recortada (foto)") }
+            }
+        }
+        Spacer(Modifier.height(16.dp))
         PlainField("Nombre (ej. Mi Aveo, La camioneta)", name, { name = it })
         Spacer(Modifier.height(8.dp))
         PlainField("Marca y modelo", model, { model = it })
@@ -648,7 +746,7 @@ fun VehicleSheet(
         Spacer(Modifier.height(8.dp))
         NumberField("Kilometraje actual", km, { km = it }, suffix = "km", decimal = false)
         Spacer(Modifier.height(16.dp))
-        Text("Color", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+        Text(if (image != null) "Color (se usa si quitas la imagen)" else "Color", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
         Spacer(Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
             PALETTE_HUES.forEachIndexed { i, hue ->
@@ -683,6 +781,8 @@ fun VehicleSheet(
                     plate = plate.trim(),
                     initialKm = parseNum(km) ?: 0.0,
                     colorIndex = color,
+                    image = image,
+                    imageFit = fit,
                 )
                 close { onSave(v) }
             },

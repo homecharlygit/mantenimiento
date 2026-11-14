@@ -3,7 +3,7 @@
 App para Android que calcula el **rendimiento de combustible** de tus vehículos y lleva la **bitácora de mantenimiento**, hecha en Kotlin + Jetpack Compose con **Material 3 Expressive** oficial (`androidx.compose.material3:material3:1.5.0-rc01`).
 
 ## Funciones
-- **Varios vehículos:** nombre, marca/modelo, año, placas, kilometraje y color. Cambias entre ellos con los chips de arriba (toca el elegido o mantén presionado para editarlo).
+- **Varios vehículos:** nombre, marca/modelo, año, placas, kilometraje, color e **imagen** (el logo de la marca o una foto, elegida de la galería; se muestra completa o recortada). Cambias entre ellos con los chips de arriba (toca el elegido o mantén presionado para editarlo).
 - **Cargas de gasolina:** capturas el kilometraje del tablero, litros y total pagado. El rendimiento se calcula al momento contra la carga anterior, con vista previa mientras escribes y comparación contra la carga pasada.
   - Cálculo *lleno a lleno*: las cargas parciales se acumulan hasta la siguiente carga de tanque lleno, así el número sale bien aunque no siempre llenes.
   - Valida que el kilometraje sea mayor al de la carga anterior.

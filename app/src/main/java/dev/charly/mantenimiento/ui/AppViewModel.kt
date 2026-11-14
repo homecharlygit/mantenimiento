@@ -17,6 +17,7 @@ import dev.charly.mantenimiento.data.Prefs
 import dev.charly.mantenimiento.data.ScheduledMaintenance
 import dev.charly.mantenimiento.data.Store
 import dev.charly.mantenimiento.data.Vehicle
+import dev.charly.mantenimiento.data.VehicleImages
 import dev.charly.mantenimiento.notify.Notifier
 import dev.charly.mantenimiento.notify.Reminders
 
@@ -58,6 +59,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     init {
         Notifier.createChannels(ctx)
         Reminders.schedule(ctx)
+        VehicleImages.cleanup(ctx, data.vehicles.mapNotNull { it.image }.toSet())
         // Busca actualizaciones solo si pasaron más de 6 horas desde la última vez
         if (System.currentTimeMillis() - updates.lastCheckMillis() > 6 * 60 * 60 * 1000L) checkForUpdates()
     }
@@ -141,11 +143,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     // ---------------- Datos ----------------
 
     fun saveVehicle(v: Vehicle) {
+        val old = data.vehicles.firstOrNull { it.id == v.id }
+        if (old?.image != null && old.image != v.image) VehicleImages.delete(ctx, old.image)
         store.upsertVehicle(v)
         if (settings.activeVehicle == null || data.vehicles.size == 1) selectVehicle(v.id)
     }
 
     fun deleteVehicle(id: Long) {
+        VehicleImages.delete(ctx, data.vehicles.firstOrNull { it.id == id }?.image)
         store.deleteVehicle(id)
         if (settings.activeVehicle == id) edit { it.copy(activeVehicle = data.vehicles.firstOrNull()?.id) }
     }

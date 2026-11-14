@@ -168,6 +168,18 @@ fun HomeScreen(vm: AppViewModel, onOpenSettings: () -> Unit, onOpenAbout: () -> 
         topBar = {
             LargeTopAppBar(
                 title = {
+                  Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (vehicle != null) {
+                        val dark = colors.background.let { (it.red + it.green + it.blue) / 3 < 0.5f }
+                        VehicleAvatar(
+                            image = vehicle.image,
+                            fit = vehicle.imageFit,
+                            color = vehicleColor(vehicle, dark),
+                            size = 48.dp,
+                            shape = MaterialShapes.Cookie9Sided.toShape(),
+                        )
+                        Spacer(Modifier.width(14.dp))
+                    }
                     Column {
                         Text(
                             vehicle?.name ?: "Mis vehículos",
@@ -184,6 +196,7 @@ fun HomeScreen(vm: AppViewModel, onOpenSettings: () -> Unit, onOpenAbout: () -> 
                             Text(sub, style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant, maxLines = 1)
                         }
                     }
+                  }
                 },
                 actions = {
                     IconButton(onClick = { haptics.click(); onOpenAbout() }) {
@@ -450,20 +463,15 @@ private fun VehicleChips(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(start = 8.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
                 ) {
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier
-                            .size(32.dp)
-                            .graphicsLayer { rotationZ = 60f * k }
-                            .clip(if (sel) MaterialShapes.Cookie6Sided.toShape() else CircleShape)
-                            .background(vehicleColor(v, dark)),
-                    ) {
-                        Icon(
-                            painterResource(R.drawable.ic_car), null,
-                            tint = colors.surface,
-                            modifier = Modifier.size(18.dp).graphicsLayer { rotationZ = -60f * k },
-                        )
-                    }
+                    VehicleAvatar(
+                        image = v.image,
+                        fit = v.imageFit,
+                        color = vehicleColor(v, dark),
+                        size = 32.dp,
+                        shape = if (sel) MaterialShapes.Cookie6Sided.toShape() else CircleShape,
+                        modifier = Modifier.graphicsLayer { rotationZ = 60f * k },
+                        contentRotation = -60f * k,
+                    )
                     Spacer(Modifier.width(10.dp))
                     Text(v.name, style = MaterialTheme.typography.titleSmall, fontWeight = if (sel) FontWeight.Bold else FontWeight.Medium)
                     if (sel) {
